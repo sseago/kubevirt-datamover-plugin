@@ -564,7 +564,7 @@ func (p *BackupPlugin) createDataUpload(vm *kvcore.VirtualMachine, backup *veler
 			Labels: map[string]string{
 				velerov1.BackupNameLabel: controllercommon.SafeLabelValue(backup.Name),
 			},
-			Annotations: buildDataUploadAnnotations(vm, operationID),
+			Annotations: buildDataUploadAnnotations(vm, backup, operationID),
 			OwnerReferences: []metav1.OwnerReference{
 				{
 					APIVersion: "velero.io/v1",
@@ -894,7 +894,7 @@ func (p *BackupPlugin) patchDataUploadCancel(namespace, name string, cancel bool
 // buildDataUploadAnnotations constructs the annotation map for a DataUpload CR.
 // It includes required controller annotations and propagates optional per-VM
 // annotations (like backup-pvc-size) from the VM to the DataUpload.
-func buildDataUploadAnnotations(vm *kvcore.VirtualMachine, operationID string) map[string]string {
+func buildDataUploadAnnotations(vm *kvcore.VirtualMachine, backup *velerov1.Backup, operationID string) map[string]string {
 	annotations := map[string]string{
 		controllercommon.AnnotationVMName:      vm.Name,
 		controllercommon.AnnotationVMNamespace: vm.Namespace,
@@ -906,6 +906,23 @@ func buildDataUploadAnnotations(vm *kvcore.VirtualMachine, operationID string) m
 	if vm.Annotations != nil {
 		if size := vm.Annotations[controllercommon.AnnotationBackupPVCSize]; size != "" {
 			annotations[controllercommon.AnnotationBackupPVCSize] = size
+		}
+	}
+
+	// Handle SkipQuiesce annotation
+	vmHasSkip := false
+	vmSkipVal := ""
+	if vm.Annotations != nil {
+		vmSkipVal, vmHasSkip = vm.Annotations[controllercommon.AnnotationSkipQuiesce]
+	}
+
+	if vmHasSkip {
+		if vmSkipVal == "true" {
+			annotations[controllercommon.AnnotationSkipQuiesce] = "true"
+		}
+	} else {
+		if backup.Annotations != nil && backup.Annotations[controllercommon.AnnotationSkipQuiesce] == "true" {
+			annotations[controllercommon.AnnotationSkipQuiesce] = "true"
 		}
 	}
 

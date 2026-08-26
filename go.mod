@@ -170,3 +170,5 @@ replace github.com/vmware-tanzu/velero => github.com/openshift/velero v0.10.2-0.
 replace github.com/kcp-dev/kcp/sdk v0.0.0-00010101000000-000000000000 => github.com/kcp-dev/kcp/sdk v0.27.1
 
 exclude github.com/kcp-dev/kcp/sdk v0.0.0-00010101000000-000000000000
+
+replace github.com/migtools/kubevirt-datamover-controller => github.com/sseago/kubevirt-datamover-controller v0.0.0-20260825201137-9b046d66a00f

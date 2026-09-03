@@ -910,20 +910,29 @@ func buildDataUploadAnnotations(vm *kvcore.VirtualMachine, backup *velerov1.Back
 	}
 
 	// Handle SkipQuiesce annotation
-	vmHasSkip := false
-	vmSkipVal := ""
+	effectiveSkipVal := ""
+
+	// Check VM annotation first
 	if vm.Annotations != nil {
-		vmSkipVal, vmHasSkip = vm.Annotations[controllercommon.AnnotationSkipQuiesce]
+		if val, ok := vm.Annotations[controllercommon.AnnotationSkipQuiesce]; ok {
+			if val == "true" || val == "false" || val == "auto" {
+				effectiveSkipVal = val
+			}
+		}
 	}
 
-	if vmHasSkip {
-		if vmSkipVal == "true" {
-			annotations[controllercommon.AnnotationSkipQuiesce] = "true"
+	// Fallback to Backup annotation if VM annotation is absent or invalid
+	if effectiveSkipVal == "" && backup.Annotations != nil {
+		if val, ok := backup.Annotations[controllercommon.AnnotationSkipQuiesce]; ok {
+			if val == "true" || val == "false" || val == "auto" {
+				effectiveSkipVal = val
+			}
 		}
-	} else {
-		if backup.Annotations != nil && backup.Annotations[controllercommon.AnnotationSkipQuiesce] == "true" {
-			annotations[controllercommon.AnnotationSkipQuiesce] = "true"
-		}
+	}
+
+	// Only set on DataUpload if the effective value is "true" or "false"
+	if effectiveSkipVal == "true" || effectiveSkipVal == "false" {
+		annotations[controllercommon.AnnotationSkipQuiesce] = effectiveSkipVal
 	}
 
 	return annotations

@@ -1690,7 +1690,7 @@ func TestBuildDataUploadAnnotations(t *testing.T) {
 		assert.Equal(t, "true", annotations[controllercommon.AnnotationSkipQuiesce])
 	})
 
-	t.Run("does not set SkipQuiesce from VM when false", func(t *testing.T) {
+	t.Run("sets SkipQuiesce from VM when false", func(t *testing.T) {
 		vm := &kvcore.VirtualMachine{
 			ObjectMeta: metav1.ObjectMeta{
 				Annotations: map[string]string{
@@ -1706,11 +1706,36 @@ func TestBuildDataUploadAnnotations(t *testing.T) {
 			},
 		}
 		annotations := buildDataUploadAnnotations(vm, backup, operationID)
+		assert.Equal(t, "false", annotations[controllercommon.AnnotationSkipQuiesce])
+	})
+
+	t.Run("does not set SkipQuiesce when VM is auto", func(t *testing.T) {
+		vm := &kvcore.VirtualMachine{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{
+					controllercommon.AnnotationSkipQuiesce: "auto",
+				},
+			},
+		}
+		backup := &velerov1.Backup{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{
+					controllercommon.AnnotationSkipQuiesce: "true", // Should be ignored because VM explicitly set it to auto
+				},
+			},
+		}
+		annotations := buildDataUploadAnnotations(vm, backup, operationID)
 		assert.NotContains(t, annotations, controllercommon.AnnotationSkipQuiesce)
 	})
 
-	t.Run("sets SkipQuiesce from Backup when VM annotation is absent", func(t *testing.T) {
-		vm := &kvcore.VirtualMachine{}
+	t.Run("falls back to Backup when VM annotation is invalid", func(t *testing.T) {
+		vm := &kvcore.VirtualMachine{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{
+					controllercommon.AnnotationSkipQuiesce: "invalid-value",
+				},
+			},
+		}
 		backup := &velerov1.Backup{
 			ObjectMeta: metav1.ObjectMeta{
 				Annotations: map[string]string{
@@ -1720,5 +1745,50 @@ func TestBuildDataUploadAnnotations(t *testing.T) {
 		}
 		annotations := buildDataUploadAnnotations(vm, backup, operationID)
 		assert.Equal(t, "true", annotations[controllercommon.AnnotationSkipQuiesce])
+	})
+
+	t.Run("sets SkipQuiesce from Backup when VM annotation is absent", func(t *testing.T) {
+		vm := &kvcore.VirtualMachine{}
+		backup := &velerov1.Backup{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{
+					controllercommon.AnnotationSkipQuiesce: "false",
+				},
+			},
+		}
+		annotations := buildDataUploadAnnotations(vm, backup, operationID)
+		assert.Equal(t, "false", annotations[controllercommon.AnnotationSkipQuiesce])
+	})
+
+	t.Run("does not set SkipQuiesce when Backup is auto and VM is absent", func(t *testing.T) {
+		vm := &kvcore.VirtualMachine{}
+		backup := &velerov1.Backup{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{
+					controllercommon.AnnotationSkipQuiesce: "auto",
+				},
+			},
+		}
+		annotations := buildDataUploadAnnotations(vm, backup, operationID)
+		assert.NotContains(t, annotations, controllercommon.AnnotationSkipQuiesce)
+	})
+
+	t.Run("does not set SkipQuiesce when both are invalid", func(t *testing.T) {
+		vm := &kvcore.VirtualMachine{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{
+					controllercommon.AnnotationSkipQuiesce: "invalid-vm",
+				},
+			},
+		}
+		backup := &velerov1.Backup{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{
+					controllercommon.AnnotationSkipQuiesce: "invalid-backup",
+				},
+			},
+		}
+		annotations := buildDataUploadAnnotations(vm, backup, operationID)
+		assert.NotContains(t, annotations, controllercommon.AnnotationSkipQuiesce)
 	})
 }

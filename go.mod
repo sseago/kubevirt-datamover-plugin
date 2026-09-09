@@ -171,4 +171,4 @@ replace github.com/kcp-dev/kcp/sdk v0.0.0-00010101000000-000000000000 => github.
 
 exclude github.com/kcp-dev/kcp/sdk v0.0.0-00010101000000-000000000000
 
-replace github.com/migtools/kubevirt-datamover-controller => github.com/sseago/kubevirt-datamover-controller v0.0.0-20260825201137-9b046d66a00f
+replace github.com/migtools/kubevirt-datamover-controller => github.com/migtools/kubevirt-datamover-controller v0.0.0-20260904191729-4f588ce7dc71
